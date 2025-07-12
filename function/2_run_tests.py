@@ -8,15 +8,15 @@ import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'sut_system')))
 
 try:
-    from main import SOPQuerySystem
+    from sut_system.main import SOPQuerySystem
     print("✅ 成功從 'sut_system' 模組引入 SOPQuerySystem。")
 except ImportError:
     print("❌ 錯誤：無法從 'sut_system/main.py' 引入 SOPQuerySystem。")
     sys.exit(1)
 
 # --- 新增的設定：控制批次大小和延遲時間 ---
-BATCH_SIZE = 5  # 每批處理 5 個問題
-DELAY_BETWEEN_BATCHES = 0  # 每批處理完後，休息 10 秒
+BATCH_SIZE = 1  # 每批處理 5 個問題
+DELAY_BETWEEN_BATCHES = 1  # 每批處理完後，休息 10 秒
 
 def load_test_dataset(file_path="test_dataset.json"):
     """載入 Q&A 測試集。"""
