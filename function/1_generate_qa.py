@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 # --- 必要的套件引入 ---
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
 
@@ -16,16 +16,16 @@ def initialize_llm():
     """載入環境變數並初始化 Groq LLM 物件。"""
     load_dotenv()
     
-    api_key = os.getenv("GROQ_API_KEY")
-    model_name = os.getenv("MODEL_NAME", "llama3-8b-8192")
+    api_key = os.getenv("OPENAI_API_KEY")
+    model_name = os.getenv("MODEL_NAME")
 
     if not api_key:
-        print("❌ 錯誤：找不到 GROQ_API_KEY。請檢查您的 .env 檔案。")
+        print("❌ 錯誤：找不到 OPENAI_API。請檢查您的 .env 檔案。")
         return None
 
     try:
         # 增加 temperature 讓每次生成的題目稍微有點不同
-        llm = ChatGroq(model=model_name, groq_api_key=api_key, temperature=0.3)
+        llm = ChatOpenAI(model=model_name, openai_api_key=api_key)
         print(f"✅ LLM ({model_name}) 初始化成功。")
         return llm
     except Exception as e:
