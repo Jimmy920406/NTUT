@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 # --- 必要的套件引入 ---
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field, field_validator
 
@@ -14,15 +14,16 @@ BATCH_SIZE = 5  # 每批評估 5 個結果
 DELAY_BETWEEN_BATCHES = 0  # 每批處理完後，休息 10 秒
 
 def initialize_llm():
-    """載入環境變數並初始化 Groq LLM 物件。"""
+    """載入環境變數並初始化 OpenAI LLM 物件。"""
     load_dotenv()
-    api_key = os.getenv("GROQ_API_KEY")
-    model_name = os.getenv("MODEL_NAME", "llama3-8b-8192")
+    api_key = os.getenv("OPENAI_API_KEY")
+    model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
     if not api_key:
-        print("❌ 錯誤：找不到 GROQ_API_KEY。")
+        print("❌ 錯誤：找不到 OPENAI_API_KEY。")
         return None
     try:
-        llm = ChatGroq(model=model_name, groq_api_key=api_key, temperature=0.0) # 評估時溫度設為0，力求客觀
+        # 將溫度設為0，力求客觀
+        llm = ChatOpenAI(model=model_name, openai_api_key=api_key)
         print(f"✅ LLM ({model_name}) 初始化成功，用於評估。")
         return llm
     except Exception as e:
