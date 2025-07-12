@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 # --- 必要的套件引入 ---
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 
 # --- 設定區：請手動將您 SUT 的 Prompt 貼到這裡 ---
@@ -107,14 +107,14 @@ SYNTHESIZER_PROMPT_ORIGINAL = """
 
 def initialize_llm():
     load_dotenv()
-    api_key = os.getenv("GROQ_API_KEY")
-    model_name = os.getenv("MODEL_NAME", "llama3-8b-8192")
+    api_key = os.getenv("OPENAI_API_KEY")
+    model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
     if not api_key:
-        print("❌ 錯誤：找不到 GROQ_API_KEY。")
+        print("❌ 錯誤：找不到 OPENAI_API_KEY。")
         return None
     try:
         # 優化建議時，使用稍高的溫度以激發創意
-        llm = ChatGroq(model=model_name, groq_api_key=api_key, temperature=0.5)
+        llm = ChatOpenAI(model=model_name, openai_api_key=api_key)
         print(f"✅ LLM ({model_name}) 初始化成功，用於 Prompt 優化。")
         return llm
     except Exception as e:
