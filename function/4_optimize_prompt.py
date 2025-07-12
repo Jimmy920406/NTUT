@@ -8,51 +8,6 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 
 # --- 設定區：請手動將您 SUT 的 Prompt 貼到這裡 ---
-"""
-        你的身份是一個自動化的、沒有感情的文字提取機器人。
-        你的唯一任務是：在下方提供的「工作表內容」中，僅找出與「主要查詢的原料名稱」最直接相關的【一個或多個簡短文字片段、句子或列表項】。
-
-        主要查詢的原料名稱：【{material_name_str}】
-        (使用者同時提及的相關詞彙，僅供你理解上下文，不用於提取：{description_keywords_str})
-
-        工作表內容：
-        ```markdown
-        {text}
-        ```
-
-        ---
-        **嚴格輸出規則 (ABSOLUTE RULES):**
-
-        1.  **精確提取**: 只輸出包含「主要查詢的原料名稱」的句子、操作步驟或其非常緊密的上下文。範圍越小越好。
-        2.  **【直接輸出原文】**: 你的輸出**必須**直接就是從「工作表內容」中複製出來的文字，一字不改。
-        3.  **【嚴格禁止】添加任何額外文字**: 你的輸出中，**絕對不允許**包含任何你自己創造的、解釋性的、總結性的文字。
-            -   **錯誤範例 (禁止輸出)**: "根據文件，食鹽在第4點提到..."
-            -   **錯誤範例 (禁止輸出)**: "以下是找到的相關內容："
-            -   **錯誤範例 (禁止輸出)**: "好的，這是關於食鹽的資訊。"
-        4.  **【嚴格禁止】提取元信息**: 絕對禁止包含 '## 工作表: ...' 這種標題，或任何 '製表日期', '製表人' 等頁腳資訊。
-        5.  **找不到內容的處理**: 如果在「工作表內容」中找不到任何與「主要查詢的原料名稱」直接相關的內容，你的唯一輸出**必須**是以下這段固定的文字，不得有任何增減：`NO_DIRECT_CONTENT_FOUND`
-        6.  **輸出格式**: 直接輸出文字即可，不要使用 markdown 的 ` ``` ` 區塊包圍。
-
-        再次強調：你的任務是複製貼上，不是總結或解釋。直接開始輸出你找到的原文片段。
-        """
-"""
-        您是一位SOP內容整理員。您的任務是將下方提供的、已從SOP文件中提取出的、與指定原料相關的【多個獨立的簡短文字片段】，整理成一個【極簡的、統一格式的數字編號列表】。
-        使用者主要查詢的原料名稱為【{material_name}】。(使用者查詢時提及的相關詞彙，供您理解上下文：{characteristics_list})
-        
-        已提取的相關SOP片段 (請將它們視為獨立的資訊點)：
-        ---
-        {combined_extracted_text}
-        ---
-
-        您的任務與輸出要求：
-        1.  **【核心任務】：** 將這些片段中的【每一個獨立的資訊點、操作步驟、或注意事項】整理出來，作為列表中的一個獨立項目。
-        2.  **【格式統一】：** 使用從 1. 開始的數字編號列表。
-        3.  **【原文呈現】：** 盡最大可能【直接使用】提取片段中的【原文表述】。**【嚴格禁止】** 任何形式的改寫、摘要、解釋或歸納。
-        4.  **【極簡輸出】：** 您的最終輸出【必須直接是這個數字編號列表本身】。**【嚴格禁止】** 包含任何前言、標題或結語。
-        5.  如果多個片段資訊重複，請只保留一個最清晰的。
-        6.  使用**繁體中文**。
-        請直接開始輸出列表：
-        """
 
 # 請從 sut_system/main.py 的 _extract_relevant_text_async 函式中複製
 EXTRACTOR_PROMPT_ORIGINAL = """
@@ -208,7 +163,7 @@ def generate_prompt_suggestions(llm, original_prompt, failure_cases):
         return "生成建議失敗。"
 
 def main():
-    """主執行流程"""
+    """主執行流程，現在會分別優化兩個 Prompt 並合併報告。"""
     llm_instance = initialize_llm()
     if not llm_instance:
         return
@@ -217,29 +172,48 @@ def main():
     if not report:
         return
 
-    # 篩選失敗案例
     poor_cases = filter_poor_performing_cases(report)
-    
     if not poor_cases:
         print("\n🎉 恭喜！所有測試案例的評分均高於閾值，目前無需優化。")
         return
         
-    # 讓 AI 分析並提供建議 (我們這裡以優化第一階段的 Extractor Prompt 為例)
-    # 您也可以將 SYNTHESIZER_PROMPT_ORIGINAL 傳入來優化第二階段的 Prompt
-    optimization_report = generate_prompt_suggestions(llm_instance, EXTRACTOR_PROMPT_ORIGINAL, poor_cases)
+    # --- 分別為兩個 Prompt 生成優化建議 ---
+    print("\n--- 1. 開始分析第一階段 (Extractor) 的 Prompt ---")
+    extractor_report = generate_prompt_suggestions(llm_instance, EXTRACTOR_PROMPT_ORIGINAL, poor_cases)
+    
+    print("\n--- 2. 開始分析第二階段 (Synthesizer) 的 Prompt ---")
+    synthesizer_report = generate_prompt_suggestions(llm_instance, SYNTHESIZER_PROMPT_ORIGINAL, poor_cases)
 
-    # 儲存報告
-    output_filename = "prompt_optimization_report.md"
+    # --- 合併兩份報告 ---
+    full_report_content = f"""
+# 綜合優化報告
+
+這份報告包含了對 RAG 系統中兩個核心 Prompt 的分析與優化建議。
+
+---
+## **第一部分：優化「文字提取 (Extractor)」階段的 Prompt**
+---
+
+{extractor_report}
+
+
+---
+## **第二部分：優化「結果整合 (Synthesizer)」階段的 Prompt**
+---
+
+{synthesizer_report}
+"""
+
+    # 儲存合併後的報告
+    output_filename = "prompt_optimization_report_full.md"
     try:
         with open(output_filename, 'w', encoding='utf-8') as f:
-            f.write(optimization_report)
-        print(f"\n✅ 優化報告已成功生成並儲存至 '{output_filename}'")
+            f.write(full_report_content.strip())
+        print(f"\n\n✅ 完整的綜合優化報告已成功生成並儲存至 '{output_filename}'")
     except Exception as e:
-        print(f"❌ 儲存優化報告時發生錯誤：{e}")
+        print(f"❌ 儲存綜合報告時發生錯誤：{e}")
     
-    print("\n--- Prompt 優化報告預覽 ---")
-    print(optimization_report)
-    print("--------------------------")
+    print("\n--- 報告預覽已在終端機中顯示 ---")
 
 if __name__ == "__main__":
     main()
